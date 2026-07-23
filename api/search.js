@@ -10,7 +10,7 @@ export default async function handler(req, res) {
   const APOLLO_KEY = process.env.APOLLO_API_KEY;
   if (!APOLLO_KEY) return res.status(500).json({ error: 'API key not configured' });
 
-  const { person_titles, person_locations, organization_industry_tag_values, page, per_page } = req.body;
+  const { person_titles, person_locations, organization_industry_tag_values, q_keywords, page, per_page } = req.body;
 
   try {
     const payload = {
@@ -20,10 +20,15 @@ export default async function handler(req, res) {
       per_page: Math.min(per_page || 25, 100)
     };
 
-    // Add industry filter if provided
     if (organization_industry_tag_values?.length) {
       payload.organization_industry_tag_values = organization_industry_tag_values;
     }
+
+    if (q_keywords) {
+      payload.q_keywords = q_keywords;
+    }
+
+    console.log('Apollo search payload:', JSON.stringify(payload));
 
     const apolloRes = await fetch('https://api.apollo.io/v1/mixed_people/api_search', {
       method: 'POST',
@@ -36,6 +41,8 @@ export default async function handler(req, res) {
     });
 
     const data = await apolloRes.json();
+    console.log('Apollo response total_entries:', data.pagination?.total_entries);
+    
     return res.status(200).json({
       people: data.people || [],
       total_entries: data.pagination?.total_entries || 0,
