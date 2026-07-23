@@ -1,0 +1,6 @@
+{
+  "name": "apollo-proxy-casino-express",
+  "version": "1.0.0",
+  "description": "Apollo enrichment proxy for Casino Express dashboard",
+  "private": true
+}
