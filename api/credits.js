@@ -1,13 +1,10 @@
-import { validateToken } from './_validate.js';
-
+// Casino Express — Apollo Credits Check
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-CE-Token');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Cache-Control', 'no-store');
   if (req.method === 'OPTIONS') return res.status(200).end();
-
-  if (!await validateToken(req)) return res.status(401).json({ error: 'Unauthorized' });
 
   const APOLLO_KEY = process.env.APOLLO_API_KEY;
   if (!APOLLO_KEY) return res.status(500).json({ error: 'API key not configured' });
