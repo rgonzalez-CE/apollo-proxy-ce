@@ -1,13 +1,13 @@
-// Casino Express — Apollo Enrichment Proxy
-// Vercel serverless function — keeps API key secure server-side
+import { validateToken } from './_validate.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-CE-Token');
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  if (!await validateToken(req)) return res.status(401).json({ error: 'Unauthorized' });
 
   const APOLLO_KEY = process.env.APOLLO_API_KEY;
   if (!APOLLO_KEY) return res.status(500).json({ error: 'API key not configured' });
@@ -24,19 +24,23 @@ export default async function handler(req, res) {
       if (domain) payload.domain = domain;
     }
 
-    const apolloRes = await fetch('https://api.apollo.io/api/v1/people/match', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Api-Key': APOLLO_KEY,
-        'Cache-Control': 'no-cache',
-      },
-      body: JSON.stringify(payload),
-    });
+    let apolloRes, attempts = 0;
+    while (attempts < 3) {
+      apolloRes = await fetch('https://api.apollo.io/api/v1/people/match', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Api-Key': APOLLO_KEY, 'Cache-Control': 'no-cache' },
+        body: JSON.stringify(payload)
+      });
+      if (apolloRes.status === 429) { attempts++; await new Promise(r => setTimeout(r, 1000 * attempts)); continue; }
+      break;
+    }
+
+    if (apolloRes.status === 429) return res.status(429).json({ error: 'rate_limit', message: 'Rate limit alcanzado' });
+    if (apolloRes.status === 402) return res.status(402).json({ error: 'no_credits', message: 'Sin créditos Apollo' });
+    if (!apolloRes.ok) return res.status(apolloRes.status).json({ error: 'apollo_error' });
 
     const data = await apolloRes.json();
     const person = data.person || {};
-
     return res.status(200).json({
       email: person.email || person.personal_emails?.[0] || '',
       linkedin_url: person.linkedin_url || '',
@@ -44,8 +48,7 @@ export default async function handler(req, res) {
       title: person.title || '',
       missing: !person.email && !person.linkedin_url ? 1 : 0,
     });
-
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: 'server_error', message: err.message });
   }
 }
