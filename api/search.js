@@ -12,43 +12,36 @@ export default async function handler(req, res) {
 
   const { person_titles, person_locations, organization_industry_tag_values, q_keywords, page, per_page } = req.body;
 
-  // Keywords por rubro — rota según página para maximizar resultados
+  // Keywords por rubro — múltiples para ampliar búsqueda
   const RUBRO_KEYWORDS = {
-    // Alimentos y Bebidas
-    'food_and_beverages':   ['alimentos','bebidas','cecinas','lacteos','frigorifico','molino','congelados'],
-    'food_production':      ['alimentos','produccion','cecinas','lacteos'],
-    'dairy':                ['lacteos','leche','queso'],
-    'beverages':            ['bebidas','jugos','agua'],
-    // Industrial
-    'industrial_automation':['industrial','manufactura','metalurgica','plasticos','quimica','envases','construccion'],
-    'plastics':             ['plasticos','polimeros','envases'],
-    'construction':         ['construccion','inmobiliaria','obras'],
-    'chemicals':            ['quimica','laboratorio','pinturas'],
-    'packaging_and_containers': ['envases','packaging','embalaje'],
-    'mining_and_metals':    ['metalurgica','aceros','mineria','metales'],
+    'food_and_beverages':   ['alimentos','bebidas','cecinas','lacteos','frigorifico','congelados','alimento'],
+    'food_production':      ['alimentos','produccion alimentos','cecinas'],
+    'dairy':                ['lacteos','leche'],
+    'beverages':            ['bebidas','jugos'],
+    'industrial_automation':['industrial','manufactura','metalurgica','plasticos','quimica','envases','construccion','aceros'],
+    'plastics':             ['plasticos','polimeros','envases plasticos'],
+    'construction':         ['construccion','edificacion','obras'],
+    'chemicals':            ['quimica','pinturas','adhesivos'],
+    'packaging_and_containers': ['envases','embalaje','packaging'],
+    'mining_and_metals':    ['metalurgica','aceros','metales','mineria'],
     'mechanical_or_industrial_engineering': ['industrial','ingenieria','manufactura'],
-    // Logística
-    'logistics_and_supply_chain': ['logistica','distribucion','bodega','almacen'],
-    'transportation_trucking_railroad': ['transporte','camiones','carga'],
+    'logistics_and_supply_chain': ['logistica','distribucion','bodega','almacen','cadena suministro'],
+    'transportation_trucking_railroad': ['transporte','camiones','carga','flota'],
     'retail':               ['retail','supermercado','tienda','comercial'],
-    'warehousing':          ['bodega','almacen','logistica'],
-    // Farmacéutica
+    'warehousing':          ['bodega','almacen','centro logistico'],
     'pharmaceuticals':      ['laboratorio','farmacia','medicamentos','farmaceutica'],
-    'hospital_and_health_care': ['clinica','hospital','salud','medico'],
-    'medical_devices':      ['laboratorio','equipos medicos','salud'],
-    'biotechnology':        ['biotecnologia','laboratorio','ciencias'],
-    // Agrícola
+    'hospital_and_health_care': ['clinica','hospital','salud'],
+    'medical_devices':      ['laboratorio','equipos medicos'],
+    'biotechnology':        ['biotecnologia','laboratorio ciencias'],
     'farming':              ['agricola','agricultura','campo','cosecha','fruta'],
-    'wine_and_spirits':     ['vina','vino','viñedo','winery'],
-    'ranching':             ['agricola','ganadero','campo'],
-    // Educación
+    'wine_and_spirits':     ['vina','vino','viñedo','bodega vino'],
+    'ranching':             ['agricola','ganadero'],
     'primary_secondary_education': ['colegio','escuela','liceo'],
     'higher_education':     ['universidad','instituto'],
     'education_management': ['educacion','academico'],
     'e_learning':           ['educacion','capacitacion'],
   };
 
-  // Palabras a excluir fuera del rubro educación
   const EXCLUDE_EDUCATION = ['universidad', 'university', 'institute', 'academia'];
 
   try {
@@ -59,7 +52,6 @@ export default async function handler(req, res) {
       const primaryTag = (organization_industry_tag_values || [])[0];
       if (primaryTag && RUBRO_KEYWORDS[primaryTag]) {
         const keywords = RUBRO_KEYWORDS[primaryTag];
-        // Rotar keyword según página
         finalKeyword = keywords[(pageNum - 1) % keywords.length];
       }
     }
@@ -68,7 +60,7 @@ export default async function handler(req, res) {
       person_titles: person_titles || [],
       person_locations: person_locations || [],
       page: pageNum,
-      per_page: Math.min(per_page || 25, 100)
+      per_page: Math.min(per_page || 100, 100)
     };
 
     if (finalKeyword) payload.q_keywords = finalKeyword;
@@ -82,7 +74,7 @@ export default async function handler(req, res) {
     const data = await apolloRes.json();
     let people = data.people || [];
 
-    // Excluir empresas educativas cuando no es rubro educación
+    // Excluir empresas educativas fuera del rubro educación
     const isEducation = (organization_industry_tag_values || []).some(t =>
       ['primary_secondary_education','higher_education','education_management','e_learning'].includes(t)
     );
