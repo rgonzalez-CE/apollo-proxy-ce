@@ -56,6 +56,9 @@ export default async function handler(req, res) {
     const finalKeyword = q_keywords || industryKeyword;
     if (finalKeyword) payload.q_keywords = finalKeyword;
 
+    // Filtrar empresas con 100+ empleados
+    payload.organization_num_employees_ranges = ["100,500","500,1000","1000,5000","5000,10000","10000,25000"];
+
     const apolloRes = await fetch('https://api.apollo.io/v1/mixed_people/api_search', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Api-Key': APOLLO_KEY, 'Cache-Control': 'no-cache' },
