@@ -12,34 +12,34 @@ export default async function handler(req, res) {
 
   const { person_titles, person_locations, organization_industry_tag_values, q_keywords, page, per_page } = req.body;
 
-  // Mapeo de industry tags a keywords que Apollo entiende mejor
+  // Mapeo de industry tags a keywords que Apollo entiende
   const INDUSTRY_KEYWORDS = {
-    'food_and_beverages':   'alimentos bebidas food beverage',
-    'food_production':      'alimentos produccion food',
-    'dairy':                'lacteos dairy',
-    'beverages':            'bebidas beverages',
-    'industrial_automation':'industrial manufactura manufacturing',
-    'plastics':             'plasticos plastics',
-    'construction':         'construccion construction',
-    'chemicals':            'quimica chemicals',
+    'food_and_beverages':   'alimentos bebidas',
+    'food_production':      'alimentos',
+    'dairy':                'lacteos',
+    'beverages':            'bebidas',
+    'industrial_automation':'industrial manufactura',
+    'plastics':             'plasticos',
+    'construction':         'construccion',
+    'chemicals':            'quimica',
     'packaging_and_containers': 'envases packaging',
-    'mining_and_metals':    'metalurgica mineria metals mining',
-    'mechanical_or_industrial_engineering': 'ingenieria industrial engineering',
-    'logistics_and_supply_chain': 'logistica supply chain',
-    'transportation_trucking_railroad': 'transporte transportation',
+    'mining_and_metals':    'metalurgica mineria',
+    'mechanical_or_industrial_engineering': 'ingenieria industrial',
+    'logistics_and_supply_chain': 'logistica',
+    'transportation_trucking_railroad': 'transporte',
     'retail':               'retail',
-    'warehousing':          'bodega warehouse',
-    'pharmaceuticals':      'farmaceutica pharmaceuticals',
-    'hospital_and_health_care': 'salud health',
-    'medical_devices':      'dispositivos medicos medical',
-    'biotechnology':        'biotecnologia biotech',
-    'farming':              'agricola farming',
-    'wine_and_spirits':     'vina winery wine',
-    'ranching':             'agricola agro',
-    'primary_secondary_education': 'colegio educacion school',
-    'higher_education':     'universidad university',
-    'education_management': 'educacion education',
-    'e_learning':           'educacion learning',
+    'warehousing':          'bodega',
+    'pharmaceuticals':      'farmaceutica',
+    'hospital_and_health_care': 'salud',
+    'medical_devices':      'dispositivos medicos',
+    'biotechnology':        'biotecnologia',
+    'farming':              'agricola',
+    'wine_and_spirits':     'vina viña',
+    'ranching':             'agricola',
+    'primary_secondary_education': 'colegio',
+    'higher_education':     'universidad',
+    'education_management': 'educacion',
+    'e_learning':           'educacion',
   };
 
   try {
@@ -50,18 +50,14 @@ export default async function handler(req, res) {
       per_page: Math.min(per_page || 25, 100)
     };
 
-    // Construir q_keywords combinando industria + subrubro
-    const industryKeywords = (organization_industry_tag_values || [])
-      .map(tag => INDUSTRY_KEYWORDS[tag] || tag)
-      .join(' ');
+    // Usar solo el primer tag como keyword principal — más restrictivo da mejores resultados
+    const primaryTag = (organization_industry_tag_values || [])[0];
+    const industryKeyword = primaryTag ? (INDUSTRY_KEYWORDS[primaryTag] || '') : '';
     
-    const allKeywords = [industryKeywords, q_keywords].filter(Boolean).join(' ').trim();
-    if (allKeywords) payload.q_keywords = allKeywords;
-
-    // También enviar organization_industry_tag_values por si Apollo los soporta
-    if (organization_industry_tag_values?.length) {
-      payload.organization_industry_tag_values = organization_industry_tag_values;
-    }
+    // Combinar keyword de industria con subrubro si existe
+    // Usar solo uno a la vez para no sobre-restringir
+    const finalKeyword = q_keywords || industryKeyword;
+    if (finalKeyword) payload.q_keywords = finalKeyword;
 
     const apolloRes = await fetch('https://api.apollo.io/v1/mixed_people/api_search', {
       method: 'POST',
