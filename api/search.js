@@ -29,7 +29,7 @@ export default async function handler(req, res) {
     'transportation_trucking_railroad': 'transporte',
     'retail':               'retail',
     'warehousing':          'bodega',
-    'pharmaceuticals':      'farmaceutica',
+    'pharmaceuticals':      'laboratorio',
     'hospital_and_health_care': 'salud',
     'medical_devices':      'laboratorio',
     'biotechnology':        'biotecnologia',
