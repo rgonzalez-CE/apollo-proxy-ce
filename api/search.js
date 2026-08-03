@@ -12,24 +12,72 @@ export default async function handler(req, res) {
 
   const { person_titles, person_locations, organization_industry_tag_values, q_keywords, page, per_page } = req.body;
 
-  // Palabras a excluir fuera del rubro educación
+  // Keywords por tag — rota según página para maximizar resultados únicos
+  const TAG_KEYWORDS = {
+    // Alimentos
+    'food_and_beverages':   ['alimentos','bebidas','cecinas','lacteos','frigorifico','congelados','alimento'],
+    'food_production':      ['alimentos','cecinas','lacteos'],
+    'dairy':                ['lacteos','leche'],
+    'beverages':            ['bebidas','jugos'],
+    // Industrial
+    'industrial_automation':['industrial','manufactura','metalurgica','plasticos','quimica','envases','construccion','aceros'],
+    'plastics':             ['plasticos','polimeros'],
+    'construction':         ['construccion','edificacion'],
+    'chemicals':            ['quimica','pinturas'],
+    'packaging_and_containers': ['envases','embalaje'],
+    'mining_and_metals':    ['metalurgica','aceros','metales'],
+    'mechanical_or_industrial_engineering': ['ingenieria','manufactura'],
+    // Logística
+    'logistics_and_supply_chain': ['logistica','distribucion','bodega'],
+    'transportation_trucking_railroad': ['transporte','camiones'],
+    'retail':               ['retail','supermercado'],
+    'warehousing':          ['bodega','almacen'],
+    // Farmacéutica
+    'pharmaceuticals':      ['laboratorio','farmacia','medicamentos'],
+    'hospital_and_health_care': ['clinica','hospital','salud'],
+    'medical_devices':      ['laboratorio','equipos medicos'],
+    'biotechnology':        ['biotecnologia'],
+    // Agrícola
+    'farming':              ['agricola','agricultura','fruta','cosecha'],
+    'wine_and_spirits':     ['vina','vino'],
+    'ranching':             ['agricola','ganadero'],
+    // Educación
+    'primary_secondary_education': ['colegio','escuela','liceo'],
+    'higher_education':     ['universidad','instituto'],
+    'education_management': ['educacion'],
+    'e_learning':           ['educacion','capacitacion'],
+  };
+
   const EXCLUDE_EDUCATION = ['universidad', 'university', 'instituto', 'institute', 'academia'];
 
   try {
+    const pageNum = page || 1;
+
+    // Determinar keyword final
+    let finalKeyword = q_keywords || '';
+
+    if (!finalKeyword) {
+      // Recopilar todas las keywords de los tags del rubro
+      const allKeywords = (organization_industry_tag_values || [])
+        .flatMap(tag => TAG_KEYWORDS[tag] || []);
+      
+      // Deduplicar
+      const uniqueKeywords = [...new Set(allKeywords)];
+      
+      if (uniqueKeywords.length > 0) {
+        // Rotar según página
+        finalKeyword = uniqueKeywords[(pageNum - 1) % uniqueKeywords.length];
+      }
+    }
+
     const payload = {
       person_titles: person_titles || [],
       person_locations: person_locations || [],
-      page: page || 1,
+      page: pageNum,
       per_page: Math.min(per_page || 100, 100)
     };
 
-    // Si hay sub-rubro (q_keywords) usar keyword específica
-    // Si no, usar tags de industria — Apollo los filtra correctamente
-    if (q_keywords) {
-      payload.q_keywords = q_keywords;
-    } else if (organization_industry_tag_values?.length) {
-      payload.organization_industry_tag_values = organization_industry_tag_values;
-    }
+    if (finalKeyword) payload.q_keywords = finalKeyword;
 
     const apolloRes = await fetch('https://api.apollo.io/v1/mixed_people/api_search', {
       method: 'POST',
@@ -45,7 +93,7 @@ export default async function handler(req, res) {
       ['primary_secondary_education','higher_education','education_management','e_learning'].includes(t)
     );
 
-    if (!isEducation && !q_keywords) {
+    if (!isEducation) {
       people = people.filter(p => {
         const name = (p.organization?.name || '').toLowerCase();
         return !EXCLUDE_EDUCATION.some(w => name.includes(w));
