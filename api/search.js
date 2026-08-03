@@ -12,45 +12,43 @@ export default async function handler(req, res) {
 
   const { person_titles, person_locations, organization_industry_tag_values, q_keywords, page, per_page } = req.body;
 
-  // Keywords por tag — rota según página
+  // Keywords ordenadas por volumen — las más potentes primero
   const TAG_KEYWORDS = {
-    'food_and_beverages':   ['alimentos','bebidas','cecinas','lacteos','frigorifico','congelados'],
-    'food_production':      ['alimentos','cecinas','lacteos'],
+    'food_and_beverages':   ['alimentos','alimentos','alimentos','bebidas','cecinas','lacteos'],
+    'food_production':      ['alimentos','alimentos','cecinas','lacteos'],
     'dairy':                ['lacteos','leche'],
     'beverages':            ['bebidas','jugos'],
-    'industrial_automation':['industrial','manufactura','metalurgica','plasticos','quimica','envases','construccion','aceros'],
-    'plastics':             ['plasticos','polimeros'],
-    'construction':         ['construccion','edificacion'],
-    'chemicals':            ['quimica','pinturas'],
-    'packaging_and_containers': ['envases','embalaje'],
-    'mining_and_metals':    ['metalurgica','aceros','metales'],
-    'mechanical_or_industrial_engineering': ['ingenieria','manufactura'],
-    'logistics_and_supply_chain': ['logistica','distribucion','bodega'],
-    'transportation_trucking_railroad': ['transporte','camiones','carga'],
-    'retail':               ['retail','supermercado'],
-    'warehousing':          ['bodega','almacen'],
-    'pharmaceuticals':      ['laboratorio','farmacia','medicamentos'],
-    'hospital_and_health_care': ['clinica','hospital','salud'],
-    'medical_devices':      ['laboratorio','equipos medicos'],
+    'industrial_automation':['industrial','industrial','industrial','construccion','aceros','quimica','envases','manufactura','plasticos'],
+    'plastics':             ['plasticos','envases'],
+    'construction':         ['construccion','construccion','edificacion'],
+    'chemicals':            ['quimica','quimica','pinturas'],
+    'packaging_and_containers': ['envases','envases','embalaje'],
+    'mining_and_metals':    ['aceros','aceros','metalurgica','metales'],
+    'mechanical_or_industrial_engineering': ['industrial','ingenieria','manufactura'],
+    'logistics_and_supply_chain': ['logistica','logistica','distribucion','bodega'],
+    'transportation_trucking_railroad': ['transporte','transporte','camiones'],
+    'retail':               ['retail','retail','supermercado'],
+    'warehousing':          ['bodega','bodega','almacen'],
+    'pharmaceuticals':      ['laboratorio','laboratorio','farmacia','medicamentos'],
+    'hospital_and_health_care': ['clinica','clinica','hospital','salud'],
+    'medical_devices':      ['laboratorio','laboratorio','equipos medicos'],
     'biotechnology':        ['biotecnologia'],
-    'farming':              ['agricola','agricultura','fruta','cosecha'],
-    'wine_and_spirits':     ['vina','vino'],
+    'farming':              ['agricola','agricola','agricola','agricultura','fruta','cosecha'],
+    'wine_and_spirits':     ['vina','vina','vino'],
     'ranching':             ['agricola','ganadero'],
-    'primary_secondary_education': ['colegio','escuela','liceo'],
-    'higher_education':     ['universidad','instituto'],
-    'education_management': ['educacion'],
+    'primary_secondary_education': ['colegio','colegio','colegio','escuela','liceo'],
+    'higher_education':     ['universidad','universidad','instituto'],
+    'education_management': ['educacion','educacion'],
     'e_learning':           ['educacion','capacitacion'],
   };
 
   try {
     const pageNum = page || 1;
-
-    // Determinar keyword — sub-rubro tiene prioridad, sino rota por tags del rubro
     let finalKeyword = q_keywords || '';
+
     if (!finalKeyword) {
-      const allKeywords = [...new Set(
-        (organization_industry_tag_values || []).flatMap(tag => TAG_KEYWORDS[tag] || [])
-      )];
+      const allKeywords = (organization_industry_tag_values || [])
+        .flatMap(tag => TAG_KEYWORDS[tag] || []);
       if (allKeywords.length > 0) {
         finalKeyword = allKeywords[(pageNum - 1) % allKeywords.length];
       }
@@ -63,13 +61,7 @@ export default async function handler(req, res) {
       per_page: Math.min(per_page || 100, 100)
     };
 
-    // Enviar AMBOS — tags + keyword — para máxima precisión
-    if (organization_industry_tag_values?.length) {
-      payload.organization_industry_tag_values = organization_industry_tag_values;
-    }
-    if (finalKeyword) {
-      payload.q_keywords = finalKeyword;
-    }
+    if (finalKeyword) payload.q_keywords = finalKeyword;
 
     const apolloRes = await fetch('https://api.apollo.io/v1/mixed_people/api_search', {
       method: 'POST',
