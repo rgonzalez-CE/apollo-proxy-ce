@@ -30,7 +30,6 @@ export default async function handler(req, res) {
       per_page: 25
     };
 
-    // Si hay dominio, usarlo como filtro principal — más preciso
     if (dominio) {
       payload.q_organization_domains = [dominio];
       delete payload.q_keywords;
@@ -52,11 +51,23 @@ export default async function handler(req, res) {
     }
 
     const data = await apolloRes.json();
-    const people = data.people || [];
+    let people = data.people || [];
+
+    // Filtrar solo contactos cuya empresa coincida con la buscada
+    if (!dominio && people.length > 0) {
+      const empresaNorm = empresa.toLowerCase().trim();
+      const filtered = people.filter(p => {
+        const orgName = (p.organization?.name || '').toLowerCase().trim();
+        // Coincidencia parcial — la empresa buscada debe estar contenida en el nombre
+        return orgName.includes(empresaNorm) || empresaNorm.includes(orgName);
+      });
+      // Solo usar el filtro si devuelve resultados — sino devolver todos
+      if (filtered.length > 0) people = filtered;
+    }
 
     return res.status(200).json({
       people,
-      total_entries: data.pagination?.total_entries || people.length,
+      total_entries: people.length,
       page: data.pagination?.page || 1
     });
 
