@@ -55,18 +55,25 @@ export default async function handler(req, res) {
 
     // Filtrar solo contactos cuya empresa coincida con la buscada
     if (!dominio && people.length > 0) {
-      const empresaNorm = empresa.toLowerCase().trim();
-      // Dividir en palabras clave significativas (más de 3 caracteres)
+      // Limpiar nombre — quitar sufijos legales y caracteres especiales
+      const limpiarEmpresa = (nombre) => nombre
+        .toLowerCase()
+        .replace(/['\u2019\.]/g, '') // quitar apóstrofes y puntos
+        .replace(/\b(s\.?a\.?|ltda\.?|spa\.?|s\.a\.s\.?|e\.i\.r\.l\.?|s\.r\.l\.?|inc\.?|corp\.?|chile|de|del|los|las|the)\b/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      const empresaNorm = limpiarEmpresa(empresa);
       const palabras = empresaNorm.split(/\s+/).filter(p => p.length > 3);
-      
+
       const filtered = people.filter(p => {
-        const orgName = (p.organization?.name || '').toLowerCase().trim();
-        // La empresa del contacto debe contener al menos una palabra clave significativa
-        return palabras.some(palabra => orgName.includes(palabra)) &&
-               // Y el nombre buscado debe estar contenido en la empresa del contacto
-               palabras.every(palabra => orgName.includes(palabra));
+        const orgName = limpiarEmpresa(p.organization?.name || '');
+        if (!orgName) return false;
+        return palabras.length > 0
+          ? palabras.every(palabra => orgName.includes(palabra))
+          : orgName.includes(empresaNorm);
       });
-      
+
       if (filtered.length > 0) people = filtered;
     }
 
