@@ -56,12 +56,17 @@ export default async function handler(req, res) {
     // Filtrar solo contactos cuya empresa coincida con la buscada
     if (!dominio && people.length > 0) {
       const empresaNorm = empresa.toLowerCase().trim();
+      // Dividir en palabras clave significativas (más de 3 caracteres)
+      const palabras = empresaNorm.split(/\s+/).filter(p => p.length > 3);
+      
       const filtered = people.filter(p => {
         const orgName = (p.organization?.name || '').toLowerCase().trim();
-        // Coincidencia parcial — la empresa buscada debe estar contenida en el nombre
-        return orgName.includes(empresaNorm) || empresaNorm.includes(orgName);
+        // La empresa del contacto debe contener al menos una palabra clave significativa
+        return palabras.some(palabra => orgName.includes(palabra)) &&
+               // Y el nombre buscado debe estar contenido en la empresa del contacto
+               palabras.every(palabra => orgName.includes(palabra));
       });
-      // Solo usar el filtro si devuelve resultados — sino devolver todos
+      
       if (filtered.length > 0) people = filtered;
     }
 
