@@ -25,14 +25,15 @@ export default async function handler(req, res) {
   try {
     const payload = {
       person_titles: DECISION_TITLES,
-      organization_names: [empresa],
+      q_keywords: empresa,
       page: 1,
       per_page: 25
     };
 
-    // Si hay dominio, agregar para mayor precisión
+    // Si hay dominio, usarlo como filtro principal — más preciso
     if (dominio) {
       payload.q_organization_domains = [dominio];
+      delete payload.q_keywords;
     }
 
     const apolloRes = await fetch('https://api.apollo.io/v1/mixed_people/api_search', {
